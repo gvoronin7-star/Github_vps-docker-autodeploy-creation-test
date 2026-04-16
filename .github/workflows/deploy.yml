@@ -8,8 +8,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/${{ github.event.repository.name }}
-  IMAGE_NAME_LOWER: ${{ github.repository_owner }}/${{ toLower(github.event.repository.name) }}
+  IMAGE_NAME_LOWER: ghcr.io/gvoronin7-star/github_vps-docker-autodeploy-creation-test
 
 jobs:
   # Джоба 1: Сборка и публикация Docker образа в GitHub Container Registry
@@ -35,7 +34,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}
+          images: ${{ env.IMAGE_NAME_LOWER }}
           tags: |
             type=ref,event=branch
             type=sha,prefix={{branch}}-
