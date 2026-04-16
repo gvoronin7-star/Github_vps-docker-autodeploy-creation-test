@@ -1,10 +1,14 @@
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
 *.pem
 *.ppk
 *.key
+*.priv
 .env
 venv/
+.venv/
 .env.local
 .DS_Store
+ssh-key-*
