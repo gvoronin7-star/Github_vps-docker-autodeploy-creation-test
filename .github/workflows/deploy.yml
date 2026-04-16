@@ -79,16 +79,16 @@ jobs:
             LATEST_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
 
             # Pull нового образа
-            echo "Pulling latest image..."
+            echo "=== Pulling latest image ==="
             docker pull $LATEST_TAG
 
             # Остановить и удалить старый контейнер
-            echo "Stopping old container..."
-            docker stop fastapi-time-server || true
-            docker rm fastapi-time-server || true
+            echo "=== Stopping old container ==="
+            docker stop fastapi-time-server 2>/dev/null || echo "No old container to stop"
+            docker rm fastapi-time-server 2>/dev/null || echo "No old container to remove"
 
             # Запустить новый контейнер на порту 8001
-            echo "Starting new container..."
+            echo "=== Starting new container ==="
             docker run -d \
               --name fastapi-time-server \
               --restart unless-stopped \
@@ -96,12 +96,21 @@ jobs:
               -e ENVIRONMENT=production \
               $LATEST_TAG
 
-            # Ожидание запуска приложения (15 секунд)
-            echo "Waiting 15 seconds for app to start..."
-            sleep 15
+            # Ожидание запуска приложения (20 секунд)
+            echo "=== Waiting 20 seconds for app to start ==="
+            sleep 20
+
+            # Проверка статуса контейнера перед удалением образов
+            echo "=== Container status before prune ==="
+            docker ps | grep fastapi-time-server || echo "WARNING: Container not running!"
 
             # Удалить старые образы (оставить только последние 5)
+            echo "=== Cleaning old images ==="
             docker image prune -af --filter "until=24h" || true
+
+            # Финальная проверка статуса контейнера
+            echo "=== Final container status ==="
+            docker ps | grep fastapi-time-server || echo "ERROR: Container stopped after prune!"
 
       - name: Verify deployment
         uses: appleboy/ssh-action@v1.0.3
@@ -113,15 +122,34 @@ jobs:
           script: |
             # Проверка что контейнер запущен
             echo "=== Container status ==="
-            docker ps | grep fastapi-time-server || (echo "Container not running!" && exit 1)
+            docker ps | grep fastapi-time-server
+            if [ $? -ne 0 ]; then
+              echo "ERROR: Container is not running!"
+              docker ps -a | grep fastapi-time-server
+              docker logs --tail 50 fastapi-time-server
+              exit 1
+            fi
 
             # Дополнительная задержка перед проверкой
-            echo "Waiting additional 5 seconds..."
+            echo "Waiting 5 seconds..."
             sleep 5
 
             # Проверка здоровья приложения на порту 8001
             echo "=== Health check ==="
-            curl -f http://localhost:8001/time || (echo "Time endpoint failed" && exit 1)
-            curl -f http://localhost:8001/date || (echo "Date endpoint failed" && exit 1)
+            curl -f http://localhost:8001/time
+            if [ $? -ne 0 ]; then
+              echo "ERROR: Time endpoint failed!"
+              docker logs --tail 50 fastapi-time-server
+              exit 1
+            fi
+
+            curl -f http://localhost:8001/date
+            if [ $? -ne 0 ]; then
+              echo "ERROR: Date endpoint failed!"
+              docker logs --tail 50 fastapi-time-server
+              exit 1
+            fi
 
             echo "✅ Deployment successful!"
+            echo "=== Container logs (last 20 lines) ==="
+            docker logs --tail 20 fastapi-time-server
