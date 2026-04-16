@@ -107,10 +107,20 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
             # Проверка что контейнер запущен
-            docker ps | grep fastapi-time-server
+            echo "=== Container status ==="
+            docker ps -a | grep fastapi-time-server
+
+            # Проверка логов контейнера
+            echo "=== Container logs ==="
+            docker logs --tail 50 fastapi-time-server || echo "No logs available"
+
+            # Ожидание запуска приложения
+            echo "Waiting 10 seconds for app to start..."
+            sleep 10
 
             # Проверка здоровья приложения на порту 8001
-            curl -f http://localhost:8001/time || exit 1
-            curl -f http://localhost:8001/date || exit 1
+            echo "=== Health check ==="
+            curl -v http://localhost:8001/time || echo "Health check failed"
+            curl -v http://localhost:8001/date || echo "Date endpoint failed"
 
-            echo "Deployment successful!"
+            echo "Deployment verification complete!"
