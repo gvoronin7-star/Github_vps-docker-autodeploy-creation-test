@@ -75,7 +75,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT, 22 }}
+          port: ${{ secrets.SSH_PORT || 22 }}
           script: |
             # Pull нового образа
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
@@ -101,7 +101,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT, 22 }}
+          port: ${{ secrets.SSH_PORT || 22 }}
           script: |
             # Проверка что контейнер запущен
             docker ps | grep fastapi-time-server
