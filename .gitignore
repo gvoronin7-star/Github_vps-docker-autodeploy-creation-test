@@ -11,4 +11,3 @@ venv/
 .venv/
 .env.local
 .DS_Store
-ssh-key-*
