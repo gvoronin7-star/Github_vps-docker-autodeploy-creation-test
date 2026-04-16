@@ -63,3 +63,38 @@ uvicorn main:app --reload
 После запуска откройте:
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
+
+## 🚀 CI/CD Автоматический деплой
+
+### Как это работает
+
+Каждый push на ветку `main` автоматически:
+1. **Собирает Docker образ**
+2. **Запушивает в GitHub Container Registry (GHCR)**
+3. **Подключается к серверу через SSH**
+4. **Запускает новый контейнер на порту 8001**
+
+### Настройка секретов
+
+В репозитории GitHub настрой следующие секреты:
+
+| Secret | Значение |
+|--------|----------|
+| `SSH_HOST` | `89.169.169.92` |
+| `SSH_USER` | `seahawk_gv_test1` |
+| `SSH_KEY` | Приватный SSH-ключ |
+| `SSH_PORT` | `22` |
+
+### Просмотр workflow
+
+```
+https://github.com/gvoronin7-star/Github_vps-docker-autodeploy-creation-test/actions
+```
+
+### Доступ к приложению
+
+После деплоя приложение доступно по адресу:
+```
+http://89.169.169.92:8001/time
+http://89.169.169.92:8001/docs
+```
