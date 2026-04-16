@@ -76,18 +76,19 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
             # Получить тег образа
-            IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
             LATEST_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
 
             # Pull нового образа
-            docker pull $IMAGE_TAG
+            echo "Pulling latest image..."
             docker pull $LATEST_TAG
 
             # Остановить и удалить старый контейнер
+            echo "Stopping old container..."
             docker stop fastapi-time-server || true
             docker rm fastapi-time-server || true
 
             # Запустить новый контейнер на порту 8001
+            echo "Starting new container..."
             docker run -d \
               --name fastapi-time-server \
               --restart unless-stopped \
@@ -95,8 +96,12 @@ jobs:
               -e ENVIRONMENT=production \
               $LATEST_TAG
 
+            # Ожидание запуска приложения (15 секунд)
+            echo "Waiting 15 seconds for app to start..."
+            sleep 15
+
             # Удалить старые образы (оставить только последние 5)
-            docker image prune -af --filter "until=24h"
+            docker image prune -af --filter "until=24h" || true
 
       - name: Verify deployment
         uses: appleboy/ssh-action@v1.0.3
@@ -108,19 +113,15 @@ jobs:
           script: |
             # Проверка что контейнер запущен
             echo "=== Container status ==="
-            docker ps -a | grep fastapi-time-server
+            docker ps | grep fastapi-time-server || (echo "Container not running!" && exit 1)
 
-            # Проверка логов контейнера
-            echo "=== Container logs ==="
-            docker logs --tail 50 fastapi-time-server || echo "No logs available"
-
-            # Ожидание запуска приложения
-            echo "Waiting 10 seconds for app to start..."
-            sleep 10
+            # Дополнительная задержка перед проверкой
+            echo "Waiting additional 5 seconds..."
+            sleep 5
 
             # Проверка здоровья приложения на порту 8001
             echo "=== Health check ==="
-            curl -v http://localhost:8001/time || echo "Health check failed"
-            curl -v http://localhost:8001/date || echo "Date endpoint failed"
+            curl -f http://localhost:8001/time || (echo "Time endpoint failed" && exit 1)
+            curl -f http://localhost:8001/date || (echo "Date endpoint failed" && exit 1)
 
-            echo "Deployment verification complete!"
+            echo "✅ Deployment successful!"
