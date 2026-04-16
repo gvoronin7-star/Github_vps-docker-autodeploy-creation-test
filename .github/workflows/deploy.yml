@@ -75,20 +75,25 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
+            # Получить тег образа
+            IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+            LATEST_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+
             # Pull нового образа
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            docker pull $IMAGE_TAG
+            docker pull $LATEST_TAG
 
             # Остановить и удалить старый контейнер
             docker stop fastapi-time-server || true
             docker rm fastapi-time-server || true
 
-            # Запустить новый контейнер
+            # Запустить новый контейнер на порту 8001
             docker run -d \
               --name fastapi-time-server \
               --restart unless-stopped \
-              -p 8000:8000 \
+              -p 8001:8000 \
               -e ENVIRONMENT=production \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+              $LATEST_TAG
 
             # Удалить старые образы (оставить только последние 5)
             docker image prune -af --filter "until=24h"
@@ -104,7 +109,8 @@ jobs:
             # Проверка что контейнер запущен
             docker ps | grep fastapi-time-server
 
-            # Проверка здоровья приложения
-            curl -f http://localhost:8000/time || exit 1
+            # Проверка здоровья приложения на порту 8001
+            curl -f http://localhost:8001/time || exit 1
+            curl -f http://localhost:8001/date || exit 1
 
             echo "Deployment successful!"
